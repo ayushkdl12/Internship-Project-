@@ -1,0 +1,507 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  Int                 @id @default(autoincrement())
+  email               String              @unique
+  passwordHash        String
+  role                String
+  isEmailVerified     Boolean             @default(false)
+  isActive            Boolean             @default(true)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  lastLogin           DateTime?
+  failedLoginAttempts Int                 @default(0)
+  lockedUntil         DateTime?
+  activityLogs        ActivityLog[]
+  announcements       Announcement[]
+  college             College?
+  emailVerifications  EmailVerification[]
+  notifications       Notification[]
+  organization        Organization?
+  student             Student?
+
+  @@index([email])
+  @@index([role])
+}
+
+model Student {
+  id                  Int                @id @default(autoincrement())
+  userId              Int                @unique
+  collegeId           Int?
+  fullName            String
+  rollNumber          String?
+  program             String?
+  semester            Int?
+  batchYear           Int?
+  phone               String?
+  address             String?
+  city                String?
+  district            String?
+  dateOfBirth         DateTime?
+  gender              String?
+  resumeUrl           String?
+  profilePictureUrl   String?
+  cgpa                Float?
+  graduationYear      Int?
+  bio                 String?
+  linkedinUrl         String?
+  portfolioUrl        String?
+  isVerifiedByCollege Boolean            @default(false)
+  verificationDate    DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  applications        Application[]
+  internEnrollments   InternEnrollment[]
+  savedInternships    SavedInternship[]
+  college             College?           @relation(fields: [collegeId], references: [id])
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentSkills       StudentSkill[]
+
+  @@index([collegeId])
+  @@index([isVerifiedByCollege])
+}
+
+model College {
+  id               Int       @id @default(autoincrement())
+  userId           Int       @unique
+  collegeName      String
+  collegeCode      String?   @unique
+  address          String
+  city             String
+  district         String
+  province         String
+  contactPhone     String
+  contactEmail     String
+  websiteUrl       String?
+  principalName    String?
+  affiliation      String?
+  establishedYear  Int?
+  description      String?
+  logoUrl          String?
+  isVerified       Boolean   @default(false)
+  verificationDate DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  students         Student[]
+
+  @@index([isVerified])
+  @@index([province])
+}
+
+model Organization {
+  id                        Int          @id @default(autoincrement())
+  userId                    Int          @unique
+  companyName               String
+  companyRegistrationNumber String?      @unique
+  industryType              String?
+  address                   String
+  city                      String
+  district                  String
+  province                  String
+  contactPhone              String
+  contactEmail              String
+  websiteUrl                String?
+  description               String?
+  logoUrl                   String?
+  companySize               String?
+  foundedYear               Int?
+  socialMediaLinks          String?
+  isVerified                Boolean      @default(false)
+  verificationDate          DateTime?
+  verifiedBy                Int?
+  createdAt                 DateTime     @default(now())
+  updatedAt                 DateTime     @updatedAt
+  internships               Internship[]
+  mentors                   Mentor[]
+  interviewSlots            InterviewSlot[]
+  user                      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([isVerified])
+  @@index([industryType])
+  @@index([province])
+}
+
+model Mentor {
+  id                Int                @id @default(autoincrement())
+  organizationId    Int
+  fullName          String
+  email             String
+  phone             String?
+  designation       String
+  department        String?
+  profilePictureUrl String?
+  bio               String?
+  expertiseAreas    String?
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  evaluations       Evaluation[]
+  internEnrollments InternEnrollment[]
+  interviews        Interview[]
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([isActive])
+}
+
+model Skill {
+  id               Int               @id @default(autoincrement())
+  skillName        String            @unique
+  category         String?
+  description      String?
+  createdAt        DateTime          @default(now())
+  internshipSkills InternshipSkill[]
+  studentSkills    StudentSkill[]
+
+  @@index([category])
+}
+
+model StudentSkill {
+  id               Int      @id @default(autoincrement())
+  studentId        Int
+  skillId          Int
+  proficiencyLevel String   @default("intermediate")
+  createdAt        DateTime @default(now())
+  skill            Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  student          Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, skillId])
+  @@index([skillId])
+}
+
+model Internship {
+  id                  Int               @id @default(autoincrement())
+  organizationId      Int
+  title               String
+  description         String
+  requirements        String?
+  responsibilities    String?
+  location            String
+  city                String
+  district            String?
+  province            String?
+  internshipType      String            @default("onsite")
+  durationWeeks       Int
+  startDate           DateTime
+  endDate             DateTime
+  applicationDeadline DateTime
+  stipendAmount       Float?
+  stipendType         String            @default("unpaid")
+  positionsAvailable  Int               @default(1)
+  positionsFilled     Int               @default(0)
+  minCgpa             Float?
+  eligiblePrograms    String?
+  eligibleSemesters   String?
+  skillsRequired      String?
+  perks               String?
+  status              String            @default("draft")
+  isPublished         Boolean           @default(false)
+  publishedAt         DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  applications        Application[]
+  organization        Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  internshipSkills    InternshipSkill[]
+  savedInternships    SavedInternship[]
+
+  @@index([status])
+  @@index([applicationDeadline])
+  @@index([city, province])
+  @@index([organizationId])
+  @@index([isPublished])
+}
+
+model InternshipSkill {
+  id               Int        @id @default(autoincrement())
+  internshipId     Int
+  skillId          Int
+  isRequired       Boolean    @default(true)
+  importanceWeight Int        @default(1)
+  createdAt        DateTime   @default(now())
+  skill            Skill      @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  internship       Internship @relation(fields: [internshipId], references: [id], onDelete: Cascade)
+
+  @@unique([internshipId, skillId])
+  @@index([skillId])
+}
+
+model Application {
+  id                  Int               @id @default(autoincrement())
+  internshipId        Int
+  studentId           Int
+  coverLetter         String?
+  resumeUrl           String?
+  additionalDocuments String?
+  answers             String?
+  status              String            @default("draft")
+  submittedAt         DateTime?
+  reviewedAt          DateTime?
+  reviewedBy          Int?
+  selectionScore      Float?
+  feedback            String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  student             Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  internship          Internship        @relation(fields: [internshipId], references: [id], onDelete: Cascade)
+  internEnrollment    InternEnrollment?
+  interviews          Interview[]
+
+  @@unique([internshipId, studentId])
+  @@index([status])
+  @@index([studentId])
+  @@index([internshipId])
+}
+
+model Interview {
+  id               Int         @id @default(autoincrement())
+  applicationId    Int
+  mentorId         Int?
+  interviewType    String      @default("video")
+  scheduledDate    DateTime
+  scheduledTime    String
+  durationMinutes  Int         @default(30)
+  location         String?
+  meetingLink      String?
+  notes            String?
+  status           String      @default("scheduled")
+  interviewerNotes String?
+  rating           Int?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  mentor           Mentor?     @relation(fields: [mentorId], references: [id])
+  application      Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model InterviewSlot {
+  id             Int          @id @default(autoincrement())
+  organizationId Int
+  startTime      DateTime
+  endTime        DateTime
+  isBooked       Boolean      @default(false)
+  applicationId  Int?         @unique
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([startTime])
+  @@index([isBooked])
+}
+
+model InternEnrollment {
+  id                  Int              @id @default(autoincrement())
+  applicationId       Int              @unique
+  studentId           Int?
+  mentorId            Int?
+  startDate           DateTime
+  endDate             DateTime
+  actualStartDate     DateTime?
+  actualEndDate       DateTime?
+  status              String           @default("enrolled")
+  completionLetterUrl String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  attendance          Attendance[]
+  certificate         Certificate?
+  evaluation          Evaluation?
+  mentor              Mentor?          @relation(fields: [mentorId], references: [id])
+  student             Student?         @relation(fields: [studentId], references: [id])
+  application         Application      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  progressReports     ProgressReport[]
+
+  @@index([status])
+  @@index([startDate, endDate])
+}
+
+model ProgressReport {
+  id               Int              @id @default(autoincrement())
+  enrollmentId     Int
+  reportType       String           @default("weekly")
+  reportPeriod     String
+  title            String
+  workDone         String
+  learnings        String?
+  challenges       String?
+  nextWeekPlan     String?
+  attachments      String?
+  mentorFeedback   String?
+  mentorRating     Int?
+  reviewedByMentor Boolean          @default(false)
+  reviewedAt       DateTime?
+  submissionDate   DateTime         @default(now())
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  enrollment       InternEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@index([enrollmentId])
+  @@index([reportType])
+  @@index([submissionDate])
+}
+
+model Attendance {
+  id             Int              @id @default(autoincrement())
+  enrollmentId   Int
+  attendanceDate DateTime
+  checkInTime    String?
+  checkOutTime   String?
+  status         String           @default("present")
+  notes          String?
+  markedBy       Int?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  enrollment     InternEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, attendanceDate])
+  @@index([attendanceDate])
+  @@index([status])
+}
+
+model Certificate {
+  id                Int              @id @default(autoincrement())
+  enrollmentId      Int              @unique
+  certificateNumber String           @unique
+  certificateUrl    String?
+  issueDate         DateTime
+  validUntil        DateTime?
+  verificationHash  String           @unique
+  qrCodeUrl         String?
+  overallRating     Float?
+  skillsAcquired    String?
+  completionStatus  String           @default("completed")
+  generatedBy       Int?
+  createdAt         DateTime         @default(now())
+  enrollment        InternEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@index([certificateNumber])
+  @@index([verificationHash])
+  @@index([issueDate])
+}
+
+model Evaluation {
+  id                  Int              @id @default(autoincrement())
+  enrollmentId        Int              @unique
+  mentorId            Int
+  technicalSkills     Int
+  communication       Int
+  professionalism     Int
+  problemSolving      Int
+  teamwork            Int
+  punctuality         Int
+  initiative          Int
+  overallRating       Float
+  strengths           String?
+  areasForImprovement String?
+  recommendations     String?
+  comments            String?
+  wouldRecommend      Boolean          @default(true)
+  evaluationDate      DateTime         @default(now())
+  createdAt           DateTime         @default(now())
+  mentor              Mentor           @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  enrollment          InternEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@index([enrollmentId])
+  @@index([overallRating])
+}
+
+model Notification {
+  id               Int       @id @default(autoincrement())
+  userId           Int
+  title            String
+  message          String
+  notificationType String
+  referenceType    String?
+  referenceId      Int?
+  isRead           Boolean   @default(false)
+  readAt           DateTime?
+  sentVia          String    @default("in_app")
+  createdAt        DateTime  @default(now())
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([notificationType])
+}
+
+model SavedInternship {
+  id           Int        @id @default(autoincrement())
+  studentId    Int
+  internshipId Int
+  createdAt    DateTime   @default(now())
+  internship   Internship @relation(fields: [internshipId], references: [id], onDelete: Cascade)
+  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, internshipId])
+}
+
+model Announcement {
+  id             Int       @id @default(autoincrement())
+  title          String
+  content        String
+  targetAudience String    @default("all")
+  priority       String    @default("medium")
+  isActive       Boolean   @default(true)
+  publishedAt    DateTime?
+  expiresAt      DateTime?
+  createdBy      Int
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  author         User      @relation(fields: [createdBy], references: [id])
+
+  @@index([isActive])
+  @@index([targetAudience])
+  @@index([priority])
+}
+
+model ActivityLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int?
+  action     String
+  entityType String?
+  entityId   Int?
+  oldValues  String?
+  newValues  String?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model PasswordReset {
+  id        Int       @id @default(autoincrement())
+  email     String
+  token     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
+  @@index([token])
+}
+
+model EmailVerification {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  token      String
+  expiresAt  DateTime
+  verifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
